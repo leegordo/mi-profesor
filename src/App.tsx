@@ -1,6 +1,9 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
 import { Separator } from '@/components/ui/separator'
+import { Button } from '@/components/ui/button'
+import { AuthProvider, useAuth } from '@/lib/auth'
+import Login from '@/pages/Login'
 
 const Home = lazy(() => import('@/pages/Home'))
 const Session = lazy(() => import('@/pages/Session'))
@@ -22,7 +25,21 @@ function TitleUpdater() {
   return null
 }
 
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center py-24">
+      <div className="flex gap-1.5">
+        <span className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" />
+        <span className="w-2 h-2 rounded-full bg-primary/40 animate-bounce [animation-delay:0.15s]" />
+        <span className="w-2 h-2 rounded-full bg-primary/40 animate-bounce [animation-delay:0.3s]" />
+      </div>
+    </div>
+  )
+}
+
 function Nav() {
+  const { signOut } = useAuth()
+
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `text-sm font-medium transition-colors ${
       isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
@@ -38,6 +55,9 @@ function Nav() {
           <NavLink to="/session" className={linkClass}>Session</NavLink>
           <NavLink to="/notes" className={linkClass}>Notes</NavLink>
           <NavLink to="/progress" className={linkClass}>Progress</NavLink>
+          <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
+            Sign out
+          </Button>
         </nav>
       </div>
       <Separator />
@@ -45,14 +65,33 @@ function Nav() {
   )
 }
 
-function PageLoader() {
+function AppRoutes() {
+  const { user, loading } = useAuth()
+
+  if (loading) return <PageLoader />
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="*" element={<Login />} />
+      </Routes>
+    )
+  }
+
   return (
-    <div className="flex items-center justify-center py-24">
-      <div className="flex gap-1.5">
-        <span className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" />
-        <span className="w-2 h-2 rounded-full bg-primary/40 animate-bounce [animation-delay:0.15s]" />
-        <span className="w-2 h-2 rounded-full bg-primary/40 animate-bounce [animation-delay:0.3s]" />
-      </div>
+    <div className="min-h-screen bg-background">
+      <Nav />
+      <main>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/session" element={<Session />} />
+            <Route path="/notes" element={<Notes />} />
+            <Route path="/progress" element={<Progress />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </main>
     </div>
   )
 }
@@ -60,20 +99,10 @@ function PageLoader() {
 export default function App() {
   return (
     <BrowserRouter>
-      <TitleUpdater />
-      <div className="min-h-screen bg-background">
-        <Nav />
-        <main>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/session" element={<Session />} />
-              <Route path="/notes" element={<Notes />} />
-              <Route path="/progress" element={<Progress />} />
-            </Routes>
-          </Suspense>
-        </main>
-      </div>
+      <AuthProvider>
+        <TitleUpdater />
+        <AppRoutes />
+      </AuthProvider>
     </BrowserRouter>
   )
 }
