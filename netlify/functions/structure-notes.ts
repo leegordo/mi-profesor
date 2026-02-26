@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import type { Handler } from '@netlify/functions'
+import { stream } from '@netlify/functions'
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -28,44 +28,44 @@ Be thorough — extract every vocabulary word, grammar rule, phrase, and topic. 
 Raw notes:
 `
 
-export const handler: Handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' }
-  }
-
+export default stream(async (req: Request) => {
   let rawText: string
   try {
-    const body = JSON.parse(event.body ?? '{}')
+    const body = await req.json()
     rawText = body.rawText
     if (!rawText?.trim()) throw new Error('empty')
   } catch {
-    return { statusCode: 400, body: JSON.stringify({ error: 'rawText is required' }) }
+    return new Response('rawText is required', { status: 400 })
   }
 
-  let message
-  try {
-    message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 8192,
-      messages: [{ role: 'user', content: STRUCTURING_PROMPT + rawText }],
-    })
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    return {
-      statusCode: 502,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: `Claude API error: ${msg}` }),
-    }
-  }
+  const anthropicStream = client.messages.stream({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 8192,
+    messages: [{ role: 'user', content: STRUCTURING_PROMPT + rawText }],
+  })
 
-  const structuredMd =
-    message.content.length > 0 && message.content[0].type === 'text'
-      ? message.content[0].text
-      : ''
+  const encoder = new TextEncoder()
+  const readable = new ReadableStream({
+    async start(controller) {
+      for await (const event of anthropicStream) {
+        if (
+          event.type === 'content_block_delta' &&
+          event.delta.type === 'text_delta'
+        ) {
+          controller.enqueue(encoder.encode(event.delta.text))
+        }
+      }
+      controller.close()
+    },
+    cancel() {
+      anthropicStream.abort()
+    },
+  })
 
-  return {
-    statusCode: 200,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ structuredMd }),
-  }
-}
+  return new Response(readable, {
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-cache',
+    },
+  })
+})
