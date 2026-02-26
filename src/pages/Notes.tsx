@@ -48,6 +48,10 @@ export default function Notes() {
   }, [loadNotes])
 
   const readFile = (f: File) => {
+    if (!f.name.endsWith('.txt') && !f.name.endsWith('.md')) {
+      setError('Only .txt and .md files are supported.')
+      return
+    }
     if (f.size > MAX_FILE_SIZE) {
       setError('File is too large. Maximum size is 500 KB.')
       return
@@ -71,7 +75,7 @@ export default function Notes() {
     e.preventDefault()
     setIsDragging(false)
     const dropped = e.dataTransfer.files[0]
-    if (dropped?.type === 'text/plain') readFile(dropped)
+    if (dropped && (dropped.name.endsWith('.txt') || dropped.name.endsWith('.md'))) readFile(dropped)
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,14 +162,15 @@ export default function Notes() {
               }`}
             >
               <p className="text-muted-foreground text-sm">
-                Drop a <span className="font-medium text-foreground">.txt</span> file here, or{' '}
+                Drop a <span className="font-medium text-foreground">.txt</span> or{' '}
+                <span className="font-medium text-foreground">.md</span> file here, or{' '}
                 <span className="text-primary underline underline-offset-2">browse</span>
               </p>
               <p className="text-xs text-muted-foreground mt-1">Max 500 KB</p>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".txt,text/plain"
+                accept=".txt,.md,text/plain,text/markdown"
                 className="hidden"
                 onChange={handleFileChange}
               />
