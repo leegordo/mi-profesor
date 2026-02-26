@@ -1,5 +1,4 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { stream } from '@netlify/functions'
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -28,44 +27,43 @@ Be thorough — extract every vocabulary word, grammar rule, phrase, and topic. 
 Raw notes:
 `
 
-export default stream(async (req: Request) => {
+export default async (req: Request) => {
+  if (req.method !== 'POST') {
+    return new Response('Method Not Allowed', { status: 405 })
+  }
+
   let rawText: string
   try {
     const body = await req.json()
     rawText = body.rawText
     if (!rawText?.trim()) throw new Error('empty')
   } catch {
-    return new Response('rawText is required', { status: 400 })
+    return new Response(JSON.stringify({ error: 'rawText is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
-  const anthropicStream = client.messages.stream({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 8192,
-    messages: [{ role: 'user', content: STRUCTURING_PROMPT + rawText }],
-  })
+  try {
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 8192,
+      messages: [{ role: 'user', content: STRUCTURING_PROMPT + rawText }],
+    })
 
-  const encoder = new TextEncoder()
-  const readable = new ReadableStream({
-    async start(controller) {
-      for await (const event of anthropicStream) {
-        if (
-          event.type === 'content_block_delta' &&
-          event.delta.type === 'text_delta'
-        ) {
-          controller.enqueue(encoder.encode(event.delta.text))
-        }
-      }
-      controller.close()
-    },
-    cancel() {
-      anthropicStream.abort()
-    },
-  })
+    const structuredMd =
+      message.content.length > 0 && message.content[0].type === 'text'
+        ? message.content[0].text
+        : ''
 
-  return new Response(readable, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'no-cache',
-    },
-  })
-})
+    return new Response(structuredMd, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return new Response(JSON.stringify({ error: `Claude API error: ${msg}` }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+}
