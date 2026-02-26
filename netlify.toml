@@ -5,6 +5,8 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+
+[functions."structure-notes"]
   timeout = 26
 
 [[redirects]]
