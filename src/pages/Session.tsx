@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
+import { Mic, MicOff, Volume2, VolumeX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -47,6 +48,14 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+// Detect Web Speech API support
+const hasSpeechRecognition =
+  typeof window !== 'undefined' &&
+  ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
+
+const hasSpeechSynthesis =
+  typeof window !== 'undefined' && 'speechSynthesis' in window
+
 export default function Session() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [messages, setMessages] = useState<Message[]>([])
@@ -62,30 +71,48 @@ export default function Session() {
   const [sessionMistakes, setSessionMistakes] = useState<MistakeRecord[]>([])
   const [isLoadingReview, setIsLoadingReview] = useState(false)
 
+  // Voice state
+  const [voiceMode, setVoiceMode] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+
+  // DOM refs
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const sessionEndedRef = useRef(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null)
 
-  // Refs that mirror state so async functions always see current values
+  // Stable value refs (avoid stale closures in async functions)
+  const sessionEndedRef = useRef(false)
   const sessionIdRef = useRef<string | null>(null)
   const exchangeCountRef = useRef(0)
   const mistakeCountRef = useRef(0)
+  const voiceModeRef = useRef(false)
+  const isStreamingRef = useRef(false)
+  const activeNotesRef = useRef('')
+  const messagesRef = useRef<Message[]>([])
 
   useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
   useEffect(() => { exchangeCountRef.current = exchangeCount }, [exchangeCount])
   useEffect(() => { mistakeCountRef.current = mistakeCount }, [mistakeCount])
+  useEffect(() => { voiceModeRef.current = voiceMode }, [voiceMode])
+  useEffect(() => { isStreamingRef.current = isStreaming }, [isStreaming])
+  useEffect(() => { activeNotesRef.current = activeNotes }, [activeNotes])
+  useEffect(() => { messagesRef.current = messages }, [messages])
 
   // Scroll to latest message
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Focus input when Claude finishes
+  // Focus text input when Claude finishes (text mode only)
   useEffect(() => {
-    if (!isStreaming && phase === 'active') inputRef.current?.focus()
-  }, [isStreaming, phase])
+    if (!isStreaming && phase === 'active' && !voiceMode) {
+      inputRef.current?.focus()
+    }
+  }, [isStreaming, phase, voiceMode])
 
-  // Countdown
+  // Countdown timer
   useEffect(() => {
     if (phase !== 'active') return
     const interval = setInterval(() => {
@@ -105,9 +132,87 @@ export default function Session() {
     }
   }, [timeRemaining, phase, warningShown])
 
+  // ─── TTS ────────────────────────────────────────────────────────────────────
+
+  const speak = useCallback((text: string) => {
+    if (!hasSpeechSynthesis || !voiceModeRef.current) return
+
+    window.speechSynthesis.cancel()
+
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'en-US'
+    utterance.rate = 0.92
+
+    utterance.onstart = () => setIsSpeaking(true)
+    utterance.onend = () => {
+      setIsSpeaking(false)
+      // Auto-activate mic after Claude finishes speaking
+      if (voiceModeRef.current && !isStreamingRef.current) {
+        setTimeout(() => {
+          if (voiceModeRef.current && !isStreamingRef.current) {
+            startListeningFn()
+          }
+        }, 400)
+      }
+    }
+    utterance.onerror = () => setIsSpeaking(false)
+
+    window.speechSynthesis.speak(utterance)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── STT ────────────────────────────────────────────────────────────────────
+
+  const startListeningFn = useCallback(() => {
+    if (!hasSpeechRecognition || isStreamingRef.current) return
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const recognition: any = new SpeechRecognitionAPI()
+    recognition.lang = 'es-ES'
+    recognition.continuous = false
+    recognition.interimResults = false
+
+    recognition.onstart = () => setIsListening(true)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript.trim()
+      if (transcript) sendMessageFn(transcript)
+    }
+
+    recognition.onerror = () => setIsListening(false)
+    recognition.onend = () => setIsListening(false)
+
+    recognition.start()
+    recognitionRef.current = recognition
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop()
+    setIsListening(false)
+  }, [])
+
+  const toggleVoiceMode = () => {
+    if (voiceMode) {
+      window.speechSynthesis?.cancel()
+      recognitionRef.current?.abort()
+      setIsListening(false)
+      setIsSpeaking(false)
+    }
+    setVoiceMode((v) => !v)
+  }
+
+  // ─── Session logic ────────────────────────────────────────────────────────
+
   const endSession = useCallback(async () => {
     if (sessionEndedRef.current) return
     sessionEndedRef.current = true
+
+    window.speechSynthesis?.cancel()
+    recognitionRef.current?.abort()
+    setIsListening(false)
+    setIsSpeaking(false)
 
     const sid = sessionIdRef.current
     if (sid) {
@@ -134,7 +239,6 @@ export default function Session() {
     setPhase('review')
   }, [])
 
-  // Auto-end when timer hits zero
   useEffect(() => {
     if (timeRemaining === 0 && phase === 'active') endSession()
   }, [timeRemaining, phase, endSession])
@@ -146,6 +250,7 @@ export default function Session() {
     retryContext?: string
   ) => {
     setIsStreaming(true)
+    isStreamingRef.current = true
     setMessages((prev) => [...prev, { role: 'assistant', content: '' }])
 
     const res = await fetch('/.netlify/functions/chat', {
@@ -156,6 +261,7 @@ export default function Session() {
 
     if (!res.ok || !res.body) {
       setIsStreaming(false)
+      isStreamingRef.current = false
       return
     }
 
@@ -177,7 +283,7 @@ export default function Session() {
       })
     }
 
-    // Extract and save mistake if present
+    // Save mistake if present
     const mistakeData = extractMistakeData(rawContent)
     if (mistakeData && sessionIdRef.current) {
       await supabase.from('mistakes').insert({
@@ -192,6 +298,41 @@ export default function Session() {
 
     setExchangeCount((c) => c + 1)
     setIsStreaming(false)
+    isStreamingRef.current = false
+
+    // Speak Claude's response if voice mode is on
+    if (voiceModeRef.current) {
+      speak(stripMistakeData(rawContent))
+    }
+  }
+
+  // Shared send logic — used by text input and STT
+  const sendMessageFn = useCallback(async (text: string) => {
+    if (!text.trim() || isStreamingRef.current) return
+
+    setInput('')
+    window.speechSynthesis?.cancel()
+    recognitionRef.current?.stop()
+    setIsListening(false)
+
+    const userMessage: Message = { role: 'user', content: text }
+    setMessages((prev) => [...prev, userMessage])
+
+    const currentMessages = messagesRef.current
+    const apiMessages = [...currentMessages, userMessage]
+      .filter((m) => (m.role === 'user' || m.role === 'assistant') && !m.hidden)
+      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+
+    await streamResponse(apiMessages, activeNotesRef.current, text)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSend = () => sendMessageFn(input)
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
   }
 
   const beginSession = async (retryContext?: string) => {
@@ -210,6 +351,7 @@ export default function Session() {
 
     const notes = data.structured_md
     setActiveNotes(notes)
+    activeNotesRef.current = notes
 
     const { data: sessionData } = await supabase
       .from('sessions')
@@ -239,30 +381,11 @@ export default function Session() {
     )
   }
 
-  const handleSend = async () => {
-    const text = input.trim()
-    if (!text || isStreaming) return
-
-    setInput('')
-
-    const userMessage: Message = { role: 'user', content: text }
-    setMessages((prev) => [...prev, userMessage])
-
-    const apiMessages = [...messages, userMessage]
-      .filter((m) => (m.role === 'user' || m.role === 'assistant') && !m.hidden)
-      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
-
-    await streamResponse(apiMessages, activeNotes, text)
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
-  }
-
   const resetToIdle = () => {
+    window.speechSynthesis?.cancel()
+    recognitionRef.current?.abort()
+    setIsListening(false)
+    setIsSpeaking(false)
     setPhase('idle')
     setMessages([])
     setExchangeCount(0)
@@ -294,7 +417,9 @@ export default function Session() {
         ? 'text-yellow-500'
         : 'text-red-500'
 
-  // ─── Idle ─────────────────────────────────────────────────────────────────
+  const voiceSupported = hasSpeechRecognition && hasSpeechSynthesis
+
+  // ─── Idle ──────────────────────────────────────────────────────────────────
 
   if (phase === 'idle') {
     return (
@@ -324,12 +449,11 @@ export default function Session() {
     )
   }
 
-  // ─── Review ───────────────────────────────────────────────────────────────
+  // ─── Review ────────────────────────────────────────────────────────────────
 
   if (phase === 'review') {
     const minutesPracticed = Math.round((SESSION_DURATION - timeRemaining) / 60)
 
-    // Group mistakes by concept
     const mistakesByConcept = sessionMistakes.reduce<Record<string, MistakeRecord[]>>(
       (acc, m) => {
         if (!acc[m.concept]) acc[m.concept] = []
@@ -341,7 +465,6 @@ export default function Session() {
 
     return (
       <div className="max-w-2xl mx-auto py-12 px-4 space-y-8">
-        {/* Stats */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold">Session complete!</h1>
           <p className="text-muted-foreground">Great work.</p>
@@ -364,7 +487,6 @@ export default function Session() {
 
         <Separator />
 
-        {/* Mistake review */}
         {isLoadingReview ? (
           <p className="text-center text-sm text-muted-foreground">Loading review…</p>
         ) : sessionMistakes.length === 0 ? (
@@ -405,12 +527,9 @@ export default function Session() {
           </div>
         )}
 
-        {/* Actions */}
         <div className="flex gap-3 justify-center flex-wrap">
           {sessionMistakes.length > 0 && (
-            <Button onClick={startRetry}>
-              Retry Weak Spots
-            </Button>
+            <Button onClick={startRetry}>Retry Weak Spots</Button>
           )}
           <Button
             variant={sessionMistakes.length > 0 ? 'outline' : 'default'}
@@ -429,6 +548,7 @@ export default function Session() {
   // ─── Active session ────────────────────────────────────────────────────────
 
   const visibleMessages = messages.filter((m) => !m.hidden)
+  const micDisabled = isStreaming || isSpeaking
 
   return (
     <div className="flex flex-col h-[calc(100vh-57px)]">
@@ -438,9 +558,21 @@ export default function Session() {
         <span className={`text-sm font-mono font-medium tabular-nums ${timerColor}`}>
           {formatTime(timeRemaining)}
         </span>
-        <Button size="sm" variant="outline" onClick={endSession} disabled={isStreaming}>
-          End Session
-        </Button>
+        <div className="flex items-center gap-2">
+          {voiceSupported && (
+            <Button
+              size="sm"
+              variant={voiceMode ? 'default' : 'ghost'}
+              onClick={toggleVoiceMode}
+              title={voiceMode ? 'Turn off voice mode' : 'Turn on voice mode'}
+            >
+              {voiceMode ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={endSession} disabled={isStreaming}>
+            End Session
+          </Button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -480,21 +612,60 @@ export default function Session() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="border-t px-4 py-3 flex gap-2 items-end shrink-0">
-        <textarea
-          ref={inputRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={isStreaming}
-          placeholder="Type your response… (Enter to send, Shift+Enter for newline)"
-          rows={1}
-          className="flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 min-h-[40px] max-h-32"
-        />
-        <Button onClick={handleSend} disabled={isStreaming || !input.trim()} size="sm">
-          Send
-        </Button>
+      {/* Input area */}
+      <div className="border-t px-4 py-3 space-y-3 shrink-0">
+        {/* Voice mic button */}
+        {voiceMode && (
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={isListening ? stopListening : startListeningFn}
+              disabled={micDisabled}
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all disabled:opacity-40 ${
+                isListening
+                  ? 'bg-red-500 text-white scale-110 ring-4 ring-red-500/30'
+                  : isSpeaking
+                    ? 'bg-muted text-muted-foreground'
+                    : 'bg-primary text-primary-foreground hover:scale-105'
+              }`}
+            >
+              {isListening ? (
+                <MicOff className="w-6 h-6" />
+              ) : (
+                <Mic className="w-6 h-6" />
+              )}
+            </button>
+            <p className="text-sm text-muted-foreground w-32">
+              {isListening
+                ? 'Listening…'
+                : isSpeaking
+                  ? 'Claude is speaking…'
+                  : isStreaming
+                    ? 'Thinking…'
+                    : 'Tap to speak'}
+            </p>
+          </div>
+        )}
+
+        {/* Text input (always available) */}
+        <div className="flex gap-2 items-end">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isStreaming}
+            placeholder={
+              voiceMode
+                ? 'Or type your response…'
+                : 'Type your response… (Enter to send, Shift+Enter for newline)'
+            }
+            rows={1}
+            className="flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 min-h-[40px] max-h-32"
+          />
+          <Button onClick={handleSend} disabled={isStreaming || !input.trim()} size="sm">
+            Send
+          </Button>
+        </div>
       </div>
     </div>
   )
