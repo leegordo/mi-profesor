@@ -70,6 +70,7 @@ export default function Session() {
   const [mistakeCount, setMistakeCount] = useState(0)
   const [sessionMistakes, setSessionMistakes] = useState<MistakeRecord[]>([])
   const [isLoadingReview, setIsLoadingReview] = useState(false)
+  const [isStarting, setIsStarting] = useState(false)
 
   // Voice state
   const [voiceMode, setVoiceMode] = useState(false)
@@ -181,7 +182,15 @@ export default function Session() {
       if (transcript) sendMessageFn(transcript)
     }
 
-    recognition.onerror = () => setIsListening(false)
+    recognition.onerror = (event: any) => {
+      if (event.error === 'not-allowed') {
+        setMessages((m) => [
+          ...m,
+          { role: 'system', content: 'Microphone access was denied. Check your browser settings and reload.' },
+        ])
+      }
+      setIsListening(false)
+    }
     recognition.onend = () => setIsListening(false)
 
     recognition.start()
@@ -260,6 +269,10 @@ export default function Session() {
     })
 
     if (!res.ok || !res.body) {
+      setMessages((prev) => [
+        ...prev.slice(0, -1),
+        { role: 'system', content: 'Something went wrong connecting to the AI. Please try again.' },
+      ])
       setIsStreaming(false)
       isStreamingRef.current = false
       return
@@ -337,6 +350,7 @@ export default function Session() {
 
   const beginSession = async (retryContext?: string) => {
     setHasNoNotes(false)
+    setIsStarting(true)
 
     const { data } = await supabase
       .from('notes')
@@ -346,6 +360,7 @@ export default function Session() {
 
     if (!data?.structured_md) {
       setHasNoNotes(true)
+      setIsStarting(false)
       return
     }
 
@@ -371,6 +386,7 @@ export default function Session() {
     exchangeCountRef.current = 0
     mistakeCountRef.current = 0
     setMessages([{ role: 'user', content: '¡Hola! I\'m ready to practice.', hidden: true }])
+    setIsStarting(false)
     setPhase('active')
 
     await streamResponse(
@@ -441,8 +457,8 @@ export default function Session() {
             </Button>
           </div>
         ) : (
-          <Button size="lg" className="px-12" onClick={() => beginSession()}>
-            Begin Session
+          <Button size="lg" className="px-12" onClick={() => beginSession()} disabled={isStarting}>
+            {isStarting ? 'Starting…' : 'Begin Session'}
           </Button>
         )}
       </div>
