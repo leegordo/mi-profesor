@@ -296,15 +296,18 @@ export default function Session() {
       })
     }
 
-    // Save mistake if present
+    // Save mistake if present and all required fields are valid strings
     const mistakeData = extractMistakeData(rawContent)
-    if (mistakeData && sessionIdRef.current) {
+    const concept = typeof mistakeData?.concept === 'string' ? mistakeData.concept : null
+    const userResponse = typeof mistakeData?.user_response === 'string' ? mistakeData.user_response : null
+    const correctResponse = typeof mistakeData?.correct_response === 'string' ? mistakeData.correct_response : null
+    if (concept && userResponse && correctResponse && sessionIdRef.current) {
       await supabase.from('mistakes').insert({
         session_id: sessionIdRef.current,
-        concept: mistakeData.concept as string,
+        concept,
         prompt: userInput,
-        user_response: mistakeData.user_response as string,
-        correct_response: mistakeData.correct_response as string,
+        user_response: userResponse,
+        correct_response: correctResponse,
       })
       setMistakeCount((c) => c + 1)
     }
