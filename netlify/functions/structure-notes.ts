@@ -42,11 +42,21 @@ export const handler: Handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'rawText is required' }) }
   }
 
-  const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 8192,
-    messages: [{ role: 'user', content: STRUCTURING_PROMPT + rawText }],
-  })
+  let message
+  try {
+    message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 8192,
+      messages: [{ role: 'user', content: STRUCTURING_PROMPT + rawText }],
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return {
+      statusCode: 502,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: `Claude API error: ${msg}` }),
+    }
+  }
 
   const structuredMd =
     message.content.length > 0 && message.content[0].type === 'text'

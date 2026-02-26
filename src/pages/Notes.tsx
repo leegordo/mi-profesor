@@ -93,12 +93,12 @@ export default function Notes() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rawText }),
       })
-      if (!res.ok) throw new Error(`Server error ${res.status}`)
       const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? `Server error ${res.status}`)
       setStructuredMd(data.structuredMd ?? '')
       setPreviewTab('structured')
-    } catch {
-      setError('Failed to structure notes. Please try again.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to structure notes. Please try again.')
     } finally {
       setIsStructuring(false)
     }
