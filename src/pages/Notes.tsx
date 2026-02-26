@@ -88,7 +88,7 @@ export default function Notes() {
     setStructuredMd('')
     setError('')
     try {
-      const res = await fetch('/.netlify/functions/structure-notes', {
+      const res = await fetch('/.netlify/functions/structure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rawText }),
