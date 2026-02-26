@@ -1,10 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk'
-import { stream } from '@netlify/functions'
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
-
 function buildSystemPrompt(notes: string, retryContext?: string): string {
   let prompt = `You are Mi Profesor, a warm and encouraging Spanish tutor having a one-on-one session with your student.
 
@@ -35,31 +28,75 @@ If no mistake was made, do not include this block at all. Never mention or refer
   return prompt
 }
 
-export default stream(async (req: Request) => {
+export default async (req: Request) => {
+  if (req.method !== 'POST') {
+    return new Response('Method Not Allowed', { status: 405 })
+  }
+
   const { messages, notes, retryContext } = await req.json()
 
-  const anthropicStream = client.messages.stream({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1024,
-    system: buildSystemPrompt(notes, retryContext),
-    messages,
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
+  if (!apiKey) {
+    return new Response('ANTHROPIC_API_KEY not configured', { status: 500 })
+  }
+
+  const apiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      stream: true,
+      system: buildSystemPrompt(notes, retryContext),
+      messages,
+    }),
   })
 
+  if (!apiResponse.ok) {
+    const errorText = await apiResponse.text()
+    return new Response(`Claude API error: ${errorText}`, { status: 502 })
+  }
+
+  const reader = apiResponse.body!.getReader()
+  const decoder = new TextDecoder()
   const encoder = new TextEncoder()
+
   const readable = new ReadableStream({
     async start(controller) {
-      for await (const event of anthropicStream) {
-        if (
-          event.type === 'content_block_delta' &&
-          event.delta.type === 'text_delta'
-        ) {
-          controller.enqueue(encoder.encode(event.delta.text))
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const events = buffer.split('\n\n')
+        buffer = events.pop() || ''
+
+        for (const eventBlock of events) {
+          for (const line of eventBlock.split('\n')) {
+            if (!line.startsWith('data: ')) continue
+            const data = line.slice(6)
+            try {
+              const parsed = JSON.parse(data)
+              if (
+                parsed.type === 'content_block_delta' &&
+                parsed.delta?.type === 'text_delta'
+              ) {
+                controller.enqueue(encoder.encode(parsed.delta.text))
+              }
+            } catch {
+              // skip non-JSON lines
+            }
+          }
         }
       }
+
       controller.close()
-    },
-    cancel() {
-      anthropicStream.abort()
     },
   })
 
@@ -69,4 +106,8 @@ export default stream(async (req: Request) => {
       'Cache-Control': 'no-cache',
     },
   })
-})
+}
+
+export const config = {
+  path: '/api/chat',
+}

@@ -262,7 +262,7 @@ export default function Session() {
     isStreamingRef.current = true
     setMessages((prev) => [...prev, { role: 'assistant', content: '' }])
 
-    const res = await fetch('/.netlify/functions/chat', {
+    const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: apiMessages, notes, retryContext }),
