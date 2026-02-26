@@ -49,7 +49,9 @@ export const handler: Handler = async (event) => {
   })
 
   const structuredMd =
-    message.content[0].type === 'text' ? message.content[0].text : ''
+    message.content.length > 0 && message.content[0].type === 'text'
+      ? message.content[0].text
+      : ''
 
   return {
     statusCode: 200,

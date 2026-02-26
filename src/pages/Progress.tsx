@@ -49,20 +49,23 @@ export default function Progress() {
 
   useEffect(() => {
     const load = async () => {
-      const [{ data: sessionsData }, { data: mistakesData }] = await Promise.all([
-        supabase
-          .from('sessions')
-          .select('*')
-          .not('ended_at', 'is', null)
-          .order('started_at', { ascending: false }),
-        supabase
-          .from('mistakes')
-          .select('*')
-          .order('logged_at', { ascending: true }),
-      ])
-      setSessions((sessionsData as SessionRecord[]) ?? [])
-      setAllMistakes((mistakesData as MistakeRecord[]) ?? [])
-      setLoading(false)
+      try {
+        const [{ data: sessionsData }, { data: mistakesData }] = await Promise.all([
+          supabase
+            .from('sessions')
+            .select('*')
+            .not('ended_at', 'is', null)
+            .order('started_at', { ascending: false }),
+          supabase
+            .from('mistakes')
+            .select('*')
+            .order('logged_at', { ascending: true }),
+        ])
+        setSessions((sessionsData as SessionRecord[]) ?? [])
+        setAllMistakes((mistakesData as MistakeRecord[]) ?? [])
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [])

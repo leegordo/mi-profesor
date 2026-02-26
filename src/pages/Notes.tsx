@@ -7,6 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { supabase } from '@/lib/supabase'
 
+const MAX_FILE_SIZE = 500 * 1024 // 500 KB
+
 type Note = {
   id: string
   raw_text: string
@@ -25,16 +27,20 @@ export default function Notes() {
   const [notes, setNotes] = useState<Note[]>([])
   const [loadingNotes, setLoadingNotes] = useState(true)
   const [previewTab, setPreviewTab] = useState<'raw' | 'structured'>('structured')
+  const [error, setError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const loadNotes = useCallback(async () => {
     setLoadingNotes(true)
-    const { data } = await supabase
-      .from('notes')
-      .select('*')
-      .order('uploaded_at', { ascending: false })
-    setNotes((data as Note[]) ?? [])
-    setLoadingNotes(false)
+    try {
+      const { data } = await supabase
+        .from('notes')
+        .select('*')
+        .order('uploaded_at', { ascending: false })
+      setNotes((data as Note[]) ?? [])
+    } finally {
+      setLoadingNotes(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -42,6 +48,11 @@ export default function Notes() {
   }, [loadNotes])
 
   const readFile = (f: File) => {
+    if (f.size > MAX_FILE_SIZE) {
+      setError('File is too large. Maximum size is 500 KB.')
+      return
+    }
+    setError('')
     setFile(f)
     setStructuredMd('')
     const reader = new FileReader()
@@ -71,15 +82,19 @@ export default function Notes() {
   const handleStructure = async () => {
     setIsStructuring(true)
     setStructuredMd('')
+    setError('')
     try {
       const res = await fetch('/.netlify/functions/structure-notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rawText }),
       })
+      if (!res.ok) throw new Error(`Server error ${res.status}`)
       const data = await res.json()
       setStructuredMd(data.structuredMd ?? '')
       setPreviewTab('structured')
+    } catch {
+      setError('Failed to structure notes. Please try again.')
     } finally {
       setIsStructuring(false)
     }
@@ -88,16 +103,19 @@ export default function Notes() {
   const handleSave = async () => {
     if (!structuredMd) return
     setIsSaving(true)
-    await supabase.from('notes').insert({
-      raw_text: rawText,
-      structured_md: structuredMd,
-      is_active: notes.length === 0, // auto-activate if it's the first note
-    })
-    setFile(null)
-    setRawText('')
-    setStructuredMd('')
-    await loadNotes()
-    setIsSaving(false)
+    try {
+      await supabase.from('notes').insert({
+        raw_text: rawText,
+        structured_md: structuredMd,
+        is_active: notes.length === 0, // auto-activate if it's the first note
+      })
+      setFile(null)
+      setRawText('')
+      setStructuredMd('')
+      await loadNotes()
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleSetActive = async (id: string) => {
@@ -108,6 +126,7 @@ export default function Notes() {
   }
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm('Delete this note? This cannot be undone.')) return
     await supabase.from('notes').delete().eq('id', id)
     await loadNotes()
   }
@@ -126,29 +145,33 @@ export default function Notes() {
 
         {/* Drop zone */}
         {!file ? (
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
-              isDragging
-                ? 'border-primary bg-primary/5'
-                : 'border-border hover:border-primary/50 hover:bg-muted/30'
-            }`}
-          >
-            <p className="text-muted-foreground text-sm">
-              Drop a <span className="font-medium text-foreground">.txt</span> file here, or{' '}
-              <span className="text-primary underline underline-offset-2">browse</span>
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".txt,text/plain"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-          </div>
+          <>
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
+                isDragging
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-primary/50 hover:bg-muted/30'
+              }`}
+            >
+              <p className="text-muted-foreground text-sm">
+                Drop a <span className="font-medium text-foreground">.txt</span> file here, or{' '}
+                <span className="text-primary underline underline-offset-2">browse</span>
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">Max 500 KB</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,text/plain"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+          </>
         ) : (
           <Card>
             <CardHeader>
@@ -157,7 +180,7 @@ export default function Notes() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => { setFile(null); setRawText(''); setStructuredMd('') }}
+                  onClick={() => { setFile(null); setRawText(''); setStructuredMd(''); setError('') }}
                 >
                   Remove
                 </Button>
@@ -168,9 +191,12 @@ export default function Notes() {
             </CardHeader>
             <CardContent className="space-y-4">
               {!structuredMd ? (
-                <Button onClick={handleStructure} disabled={isStructuring} className="w-full">
-                  {isStructuring ? 'Structuring your notes…' : 'Structure with AI'}
-                </Button>
+                <>
+                  <Button onClick={handleStructure} disabled={isStructuring} className="w-full">
+                    {isStructuring ? 'Structuring your notes…' : 'Structure with AI'}
+                  </Button>
+                  {error && <p className="text-sm text-destructive">{error}</p>}
+                </>
               ) : (
                 <>
                   {/* Tab toggle */}
