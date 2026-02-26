@@ -5,8 +5,8 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
-function buildSystemPrompt(notes: string): string {
-  return `You are Mi Profesor, a warm and encouraging Spanish tutor having a one-on-one session with your student.
+function buildSystemPrompt(notes: string, retryContext?: string): string {
+  let prompt = `You are Mi Profesor, a warm and encouraging Spanish tutor having a one-on-one session with your student.
 
 Your student's notes from their real Spanish lessons are below. Use these notes as your only source material — all exercises, vocabulary, grammar patterns, and topics must come from this content.
 
@@ -27,15 +27,21 @@ After each student response, assess whether they made a mistake. If they did, ap
 <mistake_data>{"mistake":true,"concept":"the grammar rule or vocabulary concept","user_response":"exactly what they said","correct_response":"the correct version","explanation":"brief explanation of the rule"}</mistake_data>
 
 If no mistake was made, do not include this block at all. Never mention or reference this block to the student.`
+
+  if (retryContext) {
+    prompt += `\n\n---\nThis is a TARGETED RETRY SESSION. The student struggled with these specific concepts in their last session:\n\n${retryContext}\n\nFocus your exercises primarily on these weak areas. Begin by briefly noting you'll be working on them, then dive straight into targeted practice.`
+  }
+
+  return prompt
 }
 
 export default stream(async (req: Request) => {
-  const { messages, notes } = await req.json()
+  const { messages, notes, retryContext } = await req.json()
 
   const anthropicStream = client.messages.stream({
     model: 'claude-sonnet-4-6',
     max_tokens: 1024,
-    system: buildSystemPrompt(notes),
+    system: buildSystemPrompt(notes, retryContext),
     messages,
   })
 
