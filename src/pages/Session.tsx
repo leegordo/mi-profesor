@@ -128,7 +128,7 @@ export default function Session() {
       setWarningShown(true)
       setMessages((m) => [
         ...m,
-        { role: 'system', content: '3 minutes remaining in this session.' },
+        { role: 'system', content: 'Quedan 3 minutos en esta sesión.' },
       ])
     }
   }, [timeRemaining, phase, warningShown])
@@ -141,7 +141,7 @@ export default function Session() {
     window.speechSynthesis.cancel()
 
     const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'en-US'
+    utterance.lang = 'es-ES'
     utterance.rate = 0.92
 
     utterance.onstart = () => setIsSpeaking(true)
@@ -186,7 +186,7 @@ export default function Session() {
       if (event.error === 'not-allowed') {
         setMessages((m) => [
           ...m,
-          { role: 'system', content: 'Microphone access was denied. Check your browser settings and reload.' },
+          { role: 'system', content: 'Se denegó el acceso al micrófono. Revisa la configuración de tu navegador y recarga.' },
         ])
       }
       setIsListening(false)
@@ -271,7 +271,7 @@ export default function Session() {
     if (!res.ok || !res.body) {
       setMessages((prev) => [
         ...prev.slice(0, -1),
-        { role: 'system', content: 'Something went wrong connecting to the AI. Please try again.' },
+        { role: 'system', content: 'Algo salió mal al conectar con la IA. Inténtalo de nuevo.' },
       ])
       setIsStreaming(false)
       isStreamingRef.current = false
@@ -388,12 +388,12 @@ export default function Session() {
     setMistakeCount(0)
     exchangeCountRef.current = 0
     mistakeCountRef.current = 0
-    setMessages([{ role: 'user', content: '¡Hola! I\'m ready to practice.', hidden: true }])
+    setMessages([{ role: 'user', content: '¡Hola! Estoy listo para practicar.', hidden: true }])
     setIsStarting(false)
     setPhase('active')
 
     await streamResponse(
-      [{ role: 'user', content: '¡Hola! I\'m ready to practice.' }],
+      [{ role: 'user', content: '¡Hola! Estoy listo para practicar.' }],
       notes,
       '',
       retryContext
@@ -444,24 +444,24 @@ export default function Session() {
     return (
       <div className="max-w-lg mx-auto py-24 px-4 space-y-6 text-center">
         <div>
-          <h1 className="text-3xl font-bold">Ready to practice?</h1>
+          <h1 className="text-3xl font-bold">¿Listo para practicar?</h1>
           <p className="text-muted-foreground mt-2">
-            A 15-minute session tailored to your class notes.
+            Una sesión de 15 minutos adaptada a tus apuntes de clase.
           </p>
         </div>
 
         {hasNoNotes ? (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              No active notes found. Upload and activate your class notes first.
+              No se encontraron apuntes activos. Sube y activa tus apuntes de clase primero.
             </p>
             <Button asChild variant="outline">
-              <Link to="/notes">Go to Notes</Link>
+              <Link to="/notes">Ir a Apuntes</Link>
             </Button>
           </div>
         ) : (
           <Button size="lg" className="px-12" onClick={() => beginSession()} disabled={isStarting}>
-            {isStarting ? 'Starting…' : 'Begin Session'}
+            {isStarting ? 'Iniciando…' : 'Comenzar sesión'}
           </Button>
         )}
       </div>
@@ -485,37 +485,37 @@ export default function Session() {
     return (
       <div className="max-w-2xl mx-auto py-12 px-4 space-y-8">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold">Session complete!</h1>
-          <p className="text-muted-foreground">Great work.</p>
+          <h1 className="text-3xl font-bold">¡Sesión completada!</h1>
+          <p className="text-muted-foreground">Buen trabajo.</p>
         </div>
 
         <div className="flex justify-center gap-10">
           <div className="text-center">
             <p className="text-3xl font-bold">{exchangeCount}</p>
-            <p className="text-sm text-muted-foreground mt-1">exchanges</p>
+            <p className="text-sm text-muted-foreground mt-1">intercambios</p>
           </div>
           <div className="text-center">
             <p className="text-3xl font-bold">{mistakeCount}</p>
-            <p className="text-sm text-muted-foreground mt-1">mistakes</p>
+            <p className="text-sm text-muted-foreground mt-1">errores</p>
           </div>
           <div className="text-center">
             <p className="text-3xl font-bold">{minutesPracticed}m</p>
-            <p className="text-sm text-muted-foreground mt-1">practiced</p>
+            <p className="text-sm text-muted-foreground mt-1">practicado</p>
           </div>
         </div>
 
         <Separator />
 
         {isLoadingReview ? (
-          <p className="text-center text-sm text-muted-foreground">Loading review…</p>
+          <p className="text-center text-sm text-muted-foreground">Cargando revisión…</p>
         ) : sessionMistakes.length === 0 ? (
           <div className="text-center py-4 space-y-1">
-            <p className="text-lg font-semibold">No mistakes this session!</p>
-            <p className="text-sm text-muted-foreground">Excellent work.</p>
+            <p className="text-lg font-semibold">¡Sin errores en esta sesión!</p>
+            <p className="text-sm text-muted-foreground">Excelente trabajo.</p>
           </div>
         ) : (
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Review</h2>
+            <h2 className="text-lg font-semibold">Revisión</h2>
             {Object.entries(mistakesByConcept).map(([concept, mistakes]) => (
               <Card key={concept}>
                 <CardHeader className="pb-3">
@@ -530,11 +530,11 @@ export default function Session() {
                   {mistakes.map((m, i) => (
                     <div key={i} className="text-sm space-y-1.5">
                       <div className="flex gap-2">
-                        <span className="text-muted-foreground w-20 shrink-0">You said:</span>
+                        <span className="text-muted-foreground w-20 shrink-0">Dijiste:</span>
                         <span className="text-red-500 dark:text-red-400">{m.user_response}</span>
                       </div>
                       <div className="flex gap-2">
-                        <span className="text-muted-foreground w-20 shrink-0">Correct:</span>
+                        <span className="text-muted-foreground w-20 shrink-0">Correcto:</span>
                         <span className="text-green-600 dark:text-green-400">{m.correct_response}</span>
                       </div>
                       {i < mistakes.length - 1 && <Separator className="mt-2" />}
@@ -548,16 +548,16 @@ export default function Session() {
 
         <div className="flex gap-3 justify-center flex-wrap">
           {sessionMistakes.length > 0 && (
-            <Button onClick={startRetry}>Retry Weak Spots</Button>
+            <Button onClick={startRetry}>Repasar puntos débiles</Button>
           )}
           <Button
             variant={sessionMistakes.length > 0 ? 'outline' : 'default'}
             onClick={resetToIdle}
           >
-            New Session
+            Nueva sesión
           </Button>
           <Button variant="outline" asChild>
-            <Link to="/progress">View Progress</Link>
+            <Link to="/progress">Ver progreso</Link>
           </Button>
         </div>
       </div>
@@ -583,13 +583,13 @@ export default function Session() {
               size="sm"
               variant={voiceMode ? 'default' : 'ghost'}
               onClick={toggleVoiceMode}
-              title={voiceMode ? 'Turn off voice mode' : 'Turn on voice mode'}
+              title={voiceMode ? 'Desactivar modo de voz' : 'Activar modo de voz'}
             >
               {voiceMode ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             </Button>
           )}
           <Button size="sm" variant="outline" onClick={endSession} disabled={isStreaming}>
-            End Session
+            Terminar sesión
           </Button>
         </div>
       </div>
@@ -655,12 +655,12 @@ export default function Session() {
             </button>
             <p className="text-sm text-muted-foreground w-32">
               {isListening
-                ? 'Listening…'
+                ? 'Escuchando…'
                 : isSpeaking
-                  ? 'Claude is speaking…'
+                  ? 'Hablando…'
                   : isStreaming
-                    ? 'Thinking…'
-                    : 'Tap to speak'}
+                    ? 'Pensando…'
+                    : 'Toca para hablar'}
             </p>
           </div>
         )}
@@ -675,14 +675,14 @@ export default function Session() {
             disabled={isStreaming}
             placeholder={
               voiceMode
-                ? 'Or type your response…'
-                : 'Type your response… (Enter to send, Shift+Enter for newline)'
+                ? 'O escribe tu respuesta…'
+                : 'Escribe tu respuesta… (Enter para enviar, Shift+Enter para nueva línea)'
             }
             rows={1}
             className="flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 min-h-[40px] max-h-32"
           />
           <Button onClick={handleSend} disabled={isStreaming || !input.trim()} size="sm">
-            Send
+            Enviar
           </Button>
         </div>
       </div>

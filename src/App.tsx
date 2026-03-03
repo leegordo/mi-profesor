@@ -12,9 +12,9 @@ const Progress = lazy(() => import('@/pages/Progress'))
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Mi Profesor',
-  '/session': 'Session — Mi Profesor',
-  '/notes': 'Notes — Mi Profesor',
-  '/progress': 'Progress — Mi Profesor',
+  '/session': 'Sesión — Mi Profesor',
+  '/notes': 'Apuntes — Mi Profesor',
+  '/progress': 'Progreso — Mi Profesor',
 }
 
 function TitleUpdater() {
@@ -52,11 +52,11 @@ function Nav() {
           Mi Profesor
         </NavLink>
         <nav className="flex items-center gap-4 sm:gap-6">
-          <NavLink to="/session" className={linkClass}>Session</NavLink>
-          <NavLink to="/notes" className={linkClass}>Notes</NavLink>
-          <NavLink to="/progress" className={linkClass}>Progress</NavLink>
+          <NavLink to="/session" className={linkClass}>Sesión</NavLink>
+          <NavLink to="/notes" className={linkClass}>Apuntes</NavLink>
+          <NavLink to="/progress" className={linkClass}>Progreso</NavLink>
           <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
-            Sign out
+            Cerrar sesión
           </Button>
         </nav>
       </div>

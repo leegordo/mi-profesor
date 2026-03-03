@@ -49,11 +49,11 @@ export default function Notes() {
 
   const readFile = (f: File) => {
     if (!f.name.endsWith('.txt') && !f.name.endsWith('.md')) {
-      setError('Only .txt and .md files are supported.')
+      setError('Solo se admiten archivos .txt y .md.')
       return
     }
     if (f.size > MAX_FILE_SIZE) {
-      setError('File is too large. Maximum size is 500 KB.')
+      setError('El archivo es demasiado grande. Tamaño máximo: 500 KB.')
       return
     }
     setError('')
@@ -101,7 +101,7 @@ export default function Notes() {
       setStructuredMd(text)
       setPreviewTab('structured')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to structure notes. Please try again.')
+      setError(err instanceof Error ? err.message : 'Error al estructurar los apuntes. Inténtalo de nuevo.')
     } finally {
       setIsStructuring(false)
     }
@@ -133,7 +133,7 @@ export default function Notes() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this note? This cannot be undone.')) return
+    if (!window.confirm('¿Eliminar este apunte? Esta acción no se puede deshacer.')) return
     await supabase.from('notes').delete().eq('id', id)
     await loadNotes()
   }
@@ -144,9 +144,9 @@ export default function Notes() {
       {/* Upload section */}
       <div className="space-y-4">
         <div>
-          <h1 className="text-2xl font-bold">Notes</h1>
+          <h1 className="text-2xl font-bold">Apuntes</h1>
           <p className="text-muted-foreground mt-1">
-            Upload your class notes and Claude will structure them for your sessions.
+            Sube tus apuntes de clase y Claude los estructurará para tus sesiones.
           </p>
         </div>
 
@@ -165,11 +165,11 @@ export default function Notes() {
               }`}
             >
               <p className="text-muted-foreground text-sm">
-                Drop a <span className="font-medium text-foreground">.txt</span> or{' '}
-                <span className="font-medium text-foreground">.md</span> file here, or{' '}
-                <span className="text-primary underline underline-offset-2">browse</span>
+                Arrastra un archivo <span className="font-medium text-foreground">.txt</span> o{' '}
+                <span className="font-medium text-foreground">.md</span> aquí, o{' '}
+                <span className="text-primary underline underline-offset-2">busca en tu equipo</span>
               </p>
-              <p className="text-xs text-muted-foreground mt-1">Max 500 KB</p>
+              <p className="text-xs text-muted-foreground mt-1">Máx. 500 KB</p>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -190,7 +190,7 @@ export default function Notes() {
                   size="sm"
                   onClick={() => { setFile(null); setRawText(''); setStructuredMd(''); setError('') }}
                 >
-                  Remove
+                  Quitar
                 </Button>
               </div>
               <CardDescription>
@@ -201,7 +201,7 @@ export default function Notes() {
               {!structuredMd ? (
                 <>
                   <Button onClick={handleStructure} disabled={isStructuring} className="w-full">
-                    {isStructuring ? 'Structuring your notes…' : 'Structure with AI'}
+                    {isStructuring ? 'Estructurando tus apuntes…' : 'Estructurar con IA'}
                   </Button>
                   {error && <p className="text-sm text-destructive">{error}</p>}
                 </>
@@ -219,7 +219,7 @@ export default function Notes() {
                             : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
-                        {tab === 'structured' ? 'Structured' : 'Raw'}
+                        {tab === 'structured' ? 'Estructurado' : 'Original'}
                       </button>
                     ))}
                   </div>
@@ -239,14 +239,14 @@ export default function Notes() {
 
                   <div className="flex gap-2">
                     <Button onClick={handleSave} disabled={isSaving} className="flex-1">
-                      {isSaving ? 'Saving…' : 'Save to Library'}
+                      {isSaving ? 'Guardando…' : 'Guardar en biblioteca'}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={handleStructure}
                       disabled={isStructuring}
                     >
-                      Re-structure
+                      Re-estructurar
                     </Button>
                   </div>
                 </>
@@ -260,12 +260,12 @@ export default function Notes() {
 
       {/* Library */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Library</h2>
+        <h2 className="text-lg font-semibold">Biblioteca</h2>
 
         {loadingNotes ? (
-          <p className="text-muted-foreground text-sm">Loading…</p>
+          <p className="text-muted-foreground text-sm">Cargando…</p>
         ) : notes.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No notes saved yet. Upload your first file above.</p>
+          <p className="text-muted-foreground text-sm">Aún no hay apuntes guardados. Sube tu primer archivo arriba.</p>
         ) : (
           <div className="space-y-3">
             {notes.map((note) => (
@@ -274,13 +274,13 @@ export default function Notes() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <CardTitle className="text-sm font-medium">
-                        {new Date(note.uploaded_at).toLocaleDateString('en-US', {
+                        {new Date(note.uploaded_at).toLocaleDateString('es-ES', {
                           month: 'short',
                           day: 'numeric',
                           year: 'numeric',
                         })}
                       </CardTitle>
-                      {note.is_active && <Badge variant="secondary">Active</Badge>}
+                      {note.is_active && <Badge variant="secondary">Activo</Badge>}
                     </div>
                     <div className="flex gap-2">
                       {!note.is_active && (
@@ -289,7 +289,7 @@ export default function Notes() {
                           variant="outline"
                           onClick={() => handleSetActive(note.id)}
                         >
-                          Set Active
+                          Activar
                         </Button>
                       )}
                       <Button
@@ -298,7 +298,7 @@ export default function Notes() {
                         className="text-destructive hover:text-destructive"
                         onClick={() => handleDelete(note.id)}
                       >
-                        Delete
+                        Eliminar
                       </Button>
                     </div>
                   </div>

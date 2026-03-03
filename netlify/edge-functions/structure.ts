@@ -1,24 +1,24 @@
-const STRUCTURING_PROMPT = `You are a Spanish language learning assistant. Convert the following raw class notes into a structured Markdown document.
+const STRUCTURING_PROMPT = `Eres un asistente de aprendizaje de español. Convierte los siguientes apuntes de clase en un documento Markdown estructurado.
 
-Use exactly these sections (omit any section if there's no relevant content):
+Usa exactamente estas secciones (omite cualquier sección si no hay contenido relevante):
 
-## Vocabulary
-| Word/Phrase | Translation | Example Sentence |
-|-------------|-------------|-----------------|
+## Vocabulario
+| Palabra/Frase | Traducción | Oración de ejemplo |
+|---------------|------------|-------------------|
 | ... | ... | ... |
 
-## Grammar Patterns
-For each pattern, include: the rule, structure, and 2-3 examples.
+## Patrones gramaticales
+Para cada patrón, incluye: la regla, la estructura y 2-3 ejemplos.
 
-## Phrases & Expressions
-Common phrases, idioms, or set expressions from the notes.
+## Frases y expresiones
+Frases comunes, modismos o expresiones fijas de los apuntes.
 
-## Scenarios & Topics Covered
-Topics discussed in the lesson (e.g., ordering food, giving directions, talking about the past).
+## Escenarios y temas tratados
+Temas discutidos en la lección (por ejemplo, pedir comida, dar indicaciones, hablar del pasado).
 
-Be thorough — extract every vocabulary word, grammar rule, phrase, and topic. Do not add anything that wasn't in the notes.
+Sé exhaustivo — extrae cada palabra de vocabulario, regla gramatical, frase y tema. No agregues nada que no esté en los apuntes.
 
-Raw notes:
+Apuntes originales:
 `
 
 export default async (req: Request) => {

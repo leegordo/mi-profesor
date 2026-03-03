@@ -9,7 +9,7 @@ export default function Home() {
       <div className="space-y-2">
         <h1 className="text-4xl font-bold tracking-tight">Mi Profesor</h1>
         <p className="text-muted-foreground text-lg">
-          Your personal Spanish tutor, powered by your own class notes.
+          Tu tutor personal de español, basado en tus propios apuntes de clase.
         </p>
       </div>
 
@@ -17,16 +17,16 @@ export default function Home() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              Start a Session
+              Iniciar una sesión
               <Badge variant="secondary">15 min</Badge>
             </CardTitle>
             <CardDescription>
-              Practice with a randomized mix of exercises drawn from your notes.
+              Practica con una mezcla de ejercicios basados en tus apuntes.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild className="w-full" size="lg">
-              <Link to="/session">Begin Session</Link>
+              <Link to="/session">Comenzar sesión</Link>
             </Button>
           </CardContent>
         </Card>
@@ -34,24 +34,24 @@ export default function Home() {
         <div className="grid grid-cols-2 gap-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Notes</CardTitle>
-              <CardDescription>Upload your class notes to power your sessions.</CardDescription>
+              <CardTitle className="text-base">Apuntes</CardTitle>
+              <CardDescription>Sube tus apuntes de clase para potenciar tus sesiones.</CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline" className="w-full">
-                <Link to="/notes">Manage Notes</Link>
+                <Link to="/notes">Gestionar apuntes</Link>
               </Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Progress</CardTitle>
-              <CardDescription>Review your session history and weak spots.</CardDescription>
+              <CardTitle className="text-base">Progreso</CardTitle>
+              <CardDescription>Revisa tu historial de sesiones y puntos débiles.</CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline" className="w-full">
-                <Link to="/progress">View Progress</Link>
+                <Link to="/progress">Ver progreso</Link>
               </Button>
             </CardContent>
           </Card>

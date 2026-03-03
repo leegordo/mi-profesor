@@ -29,25 +29,25 @@ export default function Login() {
         <div className="text-center space-y-2">
           <div className="text-4xl mb-4">🎓</div>
           <h1 className="text-2xl font-bold">Mi Profesor</h1>
-          <p className="text-muted-foreground text-sm">Sign in to start practicing</p>
+          <p className="text-muted-foreground text-sm">Inicia sesión para empezar a practicar</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Correo electrónico</Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="tu@ejemplo.com"
               autoComplete="email"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Contraseña</Label>
             <Input
               id="password"
               type="password"
@@ -64,7 +64,7 @@ export default function Login() {
           )}
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? 'Iniciando sesión…' : 'Iniciar sesión'}
           </Button>
         </form>
       </div>

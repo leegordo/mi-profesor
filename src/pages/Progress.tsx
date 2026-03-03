@@ -25,7 +25,7 @@ type MistakeRecord = {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+  return new Date(iso).toLocaleDateString('es-ES', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -112,7 +112,7 @@ export default function Progress() {
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto py-16 px-4">
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-muted-foreground">Cargando…</p>
       </div>
     )
   }
@@ -122,12 +122,12 @@ export default function Progress() {
   if (sessions.length === 0) {
     return (
       <div className="max-w-lg mx-auto py-24 px-4 text-center space-y-4">
-        <h1 className="text-2xl font-bold">Progress</h1>
+        <h1 className="text-2xl font-bold">Progreso</h1>
         <p className="text-muted-foreground">
-          No sessions yet. Complete a session to start tracking your progress.
+          Aún no hay sesiones. Completa una sesión para empezar a registrar tu progreso.
         </p>
         <Button asChild>
-          <Link to="/session">Start your first session</Link>
+          <Link to="/session">Iniciar tu primera sesión</Link>
         </Button>
       </div>
     )
@@ -137,26 +137,26 @@ export default function Progress() {
 
   return (
     <div className="max-w-2xl mx-auto py-12 px-4 space-y-8">
-      <h1 className="text-2xl font-bold">Progress</h1>
+      <h1 className="text-2xl font-bold">Progreso</h1>
 
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
             <p className="text-3xl font-bold">{totalSessions}</p>
-            <p className="text-sm text-muted-foreground mt-1">sessions</p>
+            <p className="text-sm text-muted-foreground mt-1">sesiones</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <p className="text-3xl font-bold">{totalMistakes}</p>
-            <p className="text-sm text-muted-foreground mt-1">total mistakes</p>
+            <p className="text-sm text-muted-foreground mt-1">errores totales</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <p className="text-3xl font-bold">{avgMistakes}</p>
-            <p className="text-sm text-muted-foreground mt-1">avg per session</p>
+            <p className="text-sm text-muted-foreground mt-1">promedio por sesión</p>
           </CardContent>
         </Card>
       </div>
@@ -165,8 +165,8 @@ export default function Progress() {
       {weakSpots.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Weak Spots</CardTitle>
-            <CardDescription>Concepts you've struggled with most</CardDescription>
+            <CardTitle className="text-base">Puntos débiles</CardTitle>
+            <CardDescription>Conceptos con los que más has tenido dificultad</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {weakSpots.map(([concept, count]) => (
@@ -191,9 +191,9 @@ export default function Progress() {
       {chartSessions.length >= 2 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Mistakes per Session</CardTitle>
+            <CardTitle className="text-base">Errores por sesión</CardTitle>
             <CardDescription>
-              Last {chartSessions.length} sessions — lower is better
+              Últimas {chartSessions.length} sesiones — menos es mejor
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -219,7 +219,7 @@ export default function Progress() {
                 )
               })}
             </div>
-            <p className="text-xs text-muted-foreground mt-3">Oldest → Most recent</p>
+            <p className="text-xs text-muted-foreground mt-3">Más antigua → Más reciente</p>
           </CardContent>
         </Card>
       )}
@@ -228,7 +228,7 @@ export default function Progress() {
 
       {/* Session history */}
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Session History</h2>
+        <h2 className="text-lg font-semibold">Historial de sesiones</h2>
         {sessions.map((s) => {
           const isExpanded = expandedId === s.id
           const mistakes = sessionMistakes[s.id]
@@ -248,14 +248,14 @@ export default function Progress() {
                         <p className="text-sm font-medium">{formatDate(s.started_at)}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {formatDuration(s.started_at, s.ended_at)} · {s.exercise_count}{' '}
-                          exchanges
+                          intercambios
                         </p>
                       </div>
                     </div>
                     <Badge variant={s.mistake_count === 0 ? 'secondary' : 'outline'}>
                       {s.mistake_count === 0
-                        ? 'No mistakes'
-                        : `${s.mistake_count} mistake${s.mistake_count !== 1 ? 's' : ''}`}
+                        ? 'Sin errores'
+                        : `${s.mistake_count} error${s.mistake_count !== 1 ? 'es' : ''}`}
                     </Badge>
                   </div>
                 </CardContent>
@@ -266,9 +266,9 @@ export default function Progress() {
                   <Separator />
                   <CardContent className="py-4">
                     {!mistakes ? (
-                      <p className="text-sm text-muted-foreground">Loading…</p>
+                      <p className="text-sm text-muted-foreground">Cargando…</p>
                     ) : mistakes.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No mistakes this session.</p>
+                      <p className="text-sm text-muted-foreground">Sin errores en esta sesión.</p>
                     ) : (
                       <div className="space-y-4">
                         {mistakes.map((m, i) => (
@@ -278,7 +278,7 @@ export default function Progress() {
                             </p>
                             <div className="flex gap-2">
                               <span className="text-muted-foreground w-16 shrink-0">
-                                You said:
+                                Dijiste:
                               </span>
                               <span className="text-red-500 dark:text-red-400">
                                 {m.user_response}
@@ -286,7 +286,7 @@ export default function Progress() {
                             </div>
                             <div className="flex gap-2">
                               <span className="text-muted-foreground w-16 shrink-0">
-                                Correct:
+                                Correcto:
                               </span>
                               <span className="text-green-600 dark:text-green-400">
                                 {m.correct_response}
