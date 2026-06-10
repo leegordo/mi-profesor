@@ -1,16 +1,10 @@
 import { useMemo, useRef, useState } from 'react'
-import {
-  Camera,
-  Languages,
-  ListChecks,
-  Mic,
-  MoreHorizontal,
-  Users,
-} from 'lucide-react'
-import { translate, type Direction } from '@/lib/vocabulary'
+import { Mic } from 'lucide-react'
+import { translate, type Direction, VOCABULARY_SIZE } from '@/lib/vocabulary'
 
 // The two language "ends" of the translator. Spanish is Latin American
-// (the screenshot's "Español (España)" becomes "Español (Latinoamérica)").
+// (the reference screenshot's "Español (España)" becomes "Español
+// (Latinoamérica)").
 const LANGS = {
   es: { label: 'Español (Latinoamérica)', placeholder: 'Introducir texto' },
   en: { label: 'Inglés (EE. UU.)', placeholder: 'Enter text' },
@@ -59,34 +53,18 @@ export default function Translator() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f2f2f7] text-[#1c1c1e] flex flex-col">
-      <div className="mx-auto w-full max-w-md flex-1 flex flex-col px-5">
-        {/* ── Top bar ──────────────────────────────────────────── */}
-        <div className="flex items-center justify-between pt-4">
-          <button
-            type="button"
-            aria-label="Listas"
-            className="grid h-11 w-11 place-items-center rounded-full bg-white shadow-sm active:scale-95 transition"
-          >
-            <ListChecks className="h-5 w-5 text-[#1c1c1e]" />
-          </button>
-          <button
-            type="button"
-            aria-label="Más opciones"
-            className="grid h-11 w-11 place-items-center rounded-full bg-white shadow-sm active:scale-95 transition"
-          >
-            <MoreHorizontal className="h-5 w-5 text-[#1c1c1e]" />
-          </button>
-        </div>
-
-        <h1 className="mt-3 text-[2.6rem] font-bold tracking-tight">Traducir</h1>
+    <div className="bg-[#f2f2f7] min-h-[calc(100vh-3.5rem)]">
+      <div className="mx-auto w-full max-w-md px-5 pb-16">
+        <h1 className="pt-6 text-[2.6rem] font-bold tracking-tight text-[#1c1c1e]">
+          Traducir
+        </h1>
 
         {/* ── Translation card ─────────────────────────────────── */}
         <div className="mt-5 rounded-[28px] bg-white shadow-sm">
           <LanguagePanel
             code={top}
             value={valueFor(top)}
-            isActive={top === activeEnd}
+            accent={top === 'en'}
             onInput={(v) => handleInput(top, v)}
             registerRef={(el) => (inputRefs.current[top] = el)}
           />
@@ -107,22 +85,17 @@ export default function Translator() {
           <LanguagePanel
             code={bottom}
             value={valueFor(bottom)}
-            isActive={bottom === activeEnd}
-            accent
+            accent={bottom === 'en'}
             onInput={(v) => handleInput(bottom, v)}
             registerRef={(el) => (inputRefs.current[bottom] = el)}
           />
         </div>
-      </div>
 
-      {/* ── Bottom tab bar ─────────────────────────────────────── */}
-      <nav className="sticky bottom-0 mt-6 border-t border-[#d9d9de] bg-[#f7f7f9]/90 backdrop-blur">
-        <div className="mx-auto flex max-w-md items-stretch justify-around px-6 py-2 pb-6">
-          <Tab icon={<Languages className="h-6 w-6" />} label="Traducir" active />
-          <Tab icon={<Camera className="h-6 w-6" />} label="Cámara" />
-          <Tab icon={<Users className="h-6 w-6" />} label="Conversación" />
-        </div>
-      </nav>
+        <p className="mt-4 px-1 text-center text-xs text-[#8e8e93]">
+          Traductor de vocabulario · {VOCABULARY_SIZE} palabras y frases ·
+          español latinoamericano
+        </p>
+      </div>
     </div>
   )
 }
@@ -130,24 +103,22 @@ export default function Translator() {
 function LanguagePanel({
   code,
   value,
-  isActive,
-  accent = false,
+  accent,
   onInput,
   registerRef,
 }: {
   code: LangCode
   value: string
-  isActive: boolean
-  accent?: boolean
+  accent: boolean
   onInput: (value: string) => void
   registerRef: (el: HTMLTextAreaElement | null) => void
 }) {
   const { label, placeholder } = LANGS[code]
-  const accentColor = accent ? 'text-[#2bb3ad]' : 'text-[#1c1c1e]'
+  const labelColor = accent ? 'text-[#2bb3ad]' : 'text-[#1c1c1e]'
 
   return (
     <div className="px-6 py-5">
-      <div className={`flex items-center gap-1 text-[15px] font-semibold ${accentColor}`}>
+      <div className={`flex items-center gap-1 text-[15px] font-semibold ${labelColor}`}>
         {label}
         <ChevronUpDown className="h-3.5 w-3.5 opacity-60" />
       </div>
@@ -173,37 +144,12 @@ function LanguagePanel({
         <button
           type="button"
           aria-label={`Dictar en ${label}`}
-          className={`mt-2 shrink-0 ${accent ? 'text-[#2bb3ad]' : 'text-[#1c1c1e]'} ${
-            isActive ? 'opacity-100' : 'opacity-80'
-          }`}
+          className={`mt-2 shrink-0 ${accent ? 'text-[#2bb3ad]' : 'text-[#1c1c1e]'}`}
         >
           <Mic className="h-6 w-6" />
         </button>
       </div>
     </div>
-  )
-}
-
-function Tab({
-  icon,
-  label,
-  active = false,
-}: {
-  icon: React.ReactNode
-  label: string
-  active?: boolean
-}) {
-  const color = active ? 'text-[#2bb3ad]' : 'text-[#8e8e93]'
-  return (
-    <button
-      type="button"
-      className={`flex flex-1 flex-col items-center gap-1 rounded-2xl py-1 ${color} ${
-        active ? 'bg-[#2bb3ad]/10' : ''
-      }`}
-    >
-      {icon}
-      <span className="text-[11px] font-medium">{label}</span>
-    </button>
   )
 }
 
