@@ -9,10 +9,12 @@ const Home = lazy(() => import('@/pages/Home'))
 const Session = lazy(() => import('@/pages/Session'))
 const Notes = lazy(() => import('@/pages/Notes'))
 const Progress = lazy(() => import('@/pages/Progress'))
+const Translator = lazy(() => import('@/pages/Translator'))
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Mi Profesor',
   '/session': 'Sesión — Mi Profesor',
+  '/translate': 'Traducir — Mi Profesor',
   '/notes': 'Apuntes — Mi Profesor',
   '/progress': 'Progreso — Mi Profesor',
 }
@@ -53,6 +55,7 @@ function Nav() {
         </NavLink>
         <nav className="flex items-center gap-4 sm:gap-6">
           <NavLink to="/session" className={linkClass}>Sesión</NavLink>
+          <NavLink to="/translate" className={linkClass}>Traducir</NavLink>
           <NavLink to="/notes" className={linkClass}>Apuntes</NavLink>
           <NavLink to="/progress" className={linkClass}>Progreso</NavLink>
           <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
@@ -86,6 +89,7 @@ function AppRoutes() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/session" element={<Session />} />
+            <Route path="/translate" element={<Translator />} />
             <Route path="/notes" element={<Notes />} />
             <Route path="/progress" element={<Progress />} />
             <Route path="*" element={<Navigate to="/" replace />} />
