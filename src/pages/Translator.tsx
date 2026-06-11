@@ -1,6 +1,7 @@
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Mic } from 'lucide-react'
-import { translate, type Direction, VOCABULARY_SIZE } from '@/lib/vocabulary'
+import { type Direction } from '@/lib/vocabulary'
+import { useTranslation, seedTranslation } from '@/lib/useTranslation'
 
 // The two language "ends" of the translator. Spanish is Latin American
 // (the reference screenshot's "Español (España)" becomes "Español
@@ -27,10 +28,8 @@ export default function Translator() {
   const bottom: LangCode = top === 'es' ? 'en' : 'es'
 
   const direction: Direction = activeEnd === 'en' ? 'en-es' : 'es-en'
-  const translated = useMemo(
-    () => (text.trim() ? translate(text, direction) : ''),
-    [text, direction],
-  )
+  const { status, result } = useTranslation(text, direction)
+  const translated = result?.translation ?? ''
 
   function valueFor(code: LangCode): string {
     return code === activeEnd ? text : translated
@@ -45,7 +44,14 @@ export default function Translator() {
     // Flip the panels and carry the translation across so the result the
     // user was reading becomes the new input — same behavior as iOS.
     setTop(bottom)
-    if (text.trim()) {
+    if (text.trim() && translated) {
+      // Pre-seed the reverse pair so the swap renders instantly instead of
+      // firing a duplicate API call for a translation we already have.
+      const reverse: Direction = direction === 'en-es' ? 'es-en' : 'en-es'
+      seedTranslation(reverse, translated, {
+        translation: text.trim(),
+        source: result?.source ?? 'llm',
+      })
       setText(translated)
       setActiveEnd(activeEnd === 'es' ? 'en' : 'es')
     }
@@ -65,6 +71,8 @@ export default function Translator() {
             code={top}
             value={valueFor(top)}
             accent={top === 'en'}
+            loading={top !== activeEnd && status === 'loading'}
+            note={top !== activeEnd ? result?.note : undefined}
             onInput={(v) => handleInput(top, v)}
             registerRef={(el) => (inputRefs.current[top] = el)}
           />
@@ -86,14 +94,17 @@ export default function Translator() {
             code={bottom}
             value={valueFor(bottom)}
             accent={bottom === 'en'}
+            loading={bottom !== activeEnd && status === 'loading'}
+            note={bottom !== activeEnd ? result?.note : undefined}
             onInput={(v) => handleInput(bottom, v)}
             registerRef={(el) => (inputRefs.current[bottom] = el)}
           />
         </div>
 
         <p className="mt-4 px-1 text-center text-xs text-[#8e8e93]">
-          Traductor de vocabulario · {VOCABULARY_SIZE} palabras y frases ·
-          español latinoamericano
+          {status === 'error'
+            ? 'sin conexión · diccionario local'
+            : 'Traductor con IA · español latinoamericano'}
         </p>
       </div>
     </div>
@@ -104,12 +115,16 @@ function LanguagePanel({
   code,
   value,
   accent,
+  loading,
+  note,
   onInput,
   registerRef,
 }: {
   code: LangCode
   value: string
   accent: boolean
+  loading: boolean
+  note?: string
   onInput: (value: string) => void
   registerRef: (el: HTMLTextAreaElement | null) => void
 }) {
@@ -121,6 +136,13 @@ function LanguagePanel({
       <div className={`flex items-center gap-1 text-[15px] font-semibold ${labelColor}`}>
         {label}
         <ChevronUpDown className="h-3.5 w-3.5 opacity-60" />
+        {loading && (
+          <span className="ml-1 inline-flex gap-0.5" aria-label="Traduciendo">
+            <span className="h-1 w-1 rounded-full bg-current animate-pulse" />
+            <span className="h-1 w-1 rounded-full bg-current animate-pulse [animation-delay:0.2s]" />
+            <span className="h-1 w-1 rounded-full bg-current animate-pulse [animation-delay:0.4s]" />
+          </span>
+        )}
       </div>
       <div className="mt-2 flex items-start justify-between gap-3">
         <textarea
@@ -130,7 +152,9 @@ function LanguagePanel({
           placeholder={placeholder}
           rows={1}
           aria-label={label}
-          className={`min-h-[2.5rem] w-full resize-none bg-transparent text-[2rem] font-semibold leading-tight outline-none placeholder:font-semibold ${
+          className={`min-h-[2.5rem] w-full resize-none bg-transparent text-[2rem] font-semibold leading-tight outline-none placeholder:font-semibold transition-opacity ${
+            loading ? 'opacity-50' : ''
+          } ${
             accent
               ? 'text-[#2bb3ad] placeholder:text-[#2bb3ad]/70'
               : 'text-[#1c1c1e] placeholder:text-[#b0b0b8]'
@@ -149,6 +173,7 @@ function LanguagePanel({
           <Mic className="h-6 w-6" />
         </button>
       </div>
+      {note && <p className="mt-1 text-sm text-[#8e8e93]">{note}</p>}
     </div>
   )
 }
