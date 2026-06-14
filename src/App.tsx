@@ -8,6 +8,7 @@ import Login from '@/pages/Login'
 const Home = lazy(() => import('@/pages/Home'))
 const Session = lazy(() => import('@/pages/Session'))
 const Notes = lazy(() => import('@/pages/Notes'))
+const Notebook = lazy(() => import('@/pages/Notebook'))
 const Progress = lazy(() => import('@/pages/Progress'))
 const Translator = lazy(() => import('@/pages/Translator'))
 
@@ -16,6 +17,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/session': 'Sesión — Mi Profesor',
   '/translate': 'Traducir — Mi Profesor',
   '/notes': 'Apuntes — Mi Profesor',
+  '/notas': 'Notas — Mi Profesor',
   '/progress': 'Progreso — Mi Profesor',
 }
 
@@ -57,6 +59,7 @@ function Nav() {
           <NavLink to="/session" className={linkClass}>Sesión</NavLink>
           <NavLink to="/translate" className={linkClass}>Traducir</NavLink>
           <NavLink to="/notes" className={linkClass}>Apuntes</NavLink>
+          <NavLink to="/notas" className={linkClass}>Notas</NavLink>
           <NavLink to="/progress" className={linkClass}>Progreso</NavLink>
           <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
             Cerrar sesión
@@ -91,6 +94,7 @@ function AppRoutes() {
             <Route path="/session" element={<Session />} />
             <Route path="/translate" element={<Translator />} />
             <Route path="/notes" element={<Notes />} />
+            <Route path="/notas" element={<Notebook />} />
             <Route path="/progress" element={<Progress />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
